@@ -4,6 +4,7 @@ from fast_arrow.util import get_last_path
 from fast_arrow.resources.account import Account
 from fast_arrow.exceptions import AuthenticationError
 from fast_arrow.exceptions import NotImplementedError
+from file_tools.json_file import import_json, export_json
 
 CLIENT_ID = "c82SH0WZOsabOXGP2sxqcj34FxkvfnWRZBKlBjFS"
 
@@ -28,19 +29,37 @@ class Client(object):
         '''
         Authenticate using data in `options`
         '''
-        if "username" in self.options and "password" in self.options:
-            self.login_oauth2(
-                self.options["username"],
-                self.options["password"],
-                self.options.get('device_token'),
-                self.options.get('mfa_code'))
-        elif "access_token" in self.options:
-            if "refresh_token" in self.options:
-                self.access_token = self.options["access_token"]
-                self.refresh_token = self.options["refresh_token"]
-                self.__set_account_info()
+
+        cur_path = os.path.abspath(__file__)
+        config = import_json('../data/config.json', path=cur_path)
+        auth_data = import_json('../data/login_data.json', path=cur_path)
+
+        self.options["username"] = self.options["username"] if 'username' in self.options else config['u_n'].b64_dec()
+
+        if 'Bearer' not in auth_data['auth']:
+
+            password = self.options["password"] if self.options["password"] is not None else config['p_w'].b64_dec()
+
+            if "username" in self.options and "password" in self.options:
+                self.login_oauth2(
+                    self.options["username"],
+                    password,
+                    self.options.get('device_token'),
+                    self.options.get('mfa_code'),
+                    cur_path)
+            elif "access_token" in self.options:
+                if "refresh_token" in self.options:
+                    self.access_token = self.options["access_token"]
+                    self.refresh_token = self.options["refresh_token"]
+                    self.__set_account_info()
+            else:
+                self.authenticated = False
+
         else:
-            self.authenticated = False
+            self.access_token = auth_data['access_token']
+            self.refresh_token = auth_data['refresh_token']
+            self.authenticated = True
+
         return self.authenticated
 
     def get(self, url=None, params=None, retry=True):
@@ -107,7 +126,7 @@ class Client(object):
             headers["Content-Type"] = "application/json; charset=utf-8"
         return headers
 
-    def login_oauth2(self, username, password, device_token=None, mfa_code=None):
+    def login_oauth2(self, username, password, device_token=None, mfa_code=None, cur_path=None):
         '''
         Login using username and password
         '''
@@ -143,6 +162,12 @@ class Client(object):
         self.mfa_code = res["mfa_code"]
         self.scope = res["scope"]
         self.__set_account_info()
+        if cur_path is not None:
+            export_json ({
+                        'access_token': self.access_token,
+                        'refresh_token': self.refresh_token,
+                        'auth': 'Bearer ' + self.auth_token
+                    }, '../data/login_data.json', path=cur_path, indent=4)
         return self.authenticated
 
     def __set_account_info(self):
