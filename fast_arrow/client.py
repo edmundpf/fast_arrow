@@ -32,6 +32,7 @@ class Client(object):
             self.login_oauth2(
                 self.options["username"],
                 self.options["password"],
+                self.options.get('device_token'),
                 self.options.get('mfa_code'))
         elif "access_token" in self.options:
             if "refresh_token" in self.options:
@@ -106,7 +107,7 @@ class Client(object):
             headers["Content-Type"] = "application/json; charset=utf-8"
         return headers
 
-    def login_oauth2(self, username, password, mfa_code=None):
+    def login_oauth2(self, username, password, device_token=None, mfa_code=None):
         '''
         Login using username and password
         '''
@@ -116,7 +117,8 @@ class Client(object):
             "client_id": CLIENT_ID,
             "expires_in": 86400,
             "password": password,
-            "username": username
+            "username": username,
+            "device_token": device_token
         }
         if mfa_code is not None:
             data['mfa_code'] = mfa_code

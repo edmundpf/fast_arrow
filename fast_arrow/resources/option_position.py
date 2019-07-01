@@ -1,6 +1,7 @@
 from fast_arrow import util
 from fast_arrow.resources.option import Option
 from fast_arrow.resources.option_marketdata import OptionMarketdata
+from fast_arrow.resources.option_order import OptionOrder
 from fast_arrow.util import is_max_date_gt
 
 
@@ -86,6 +87,23 @@ class OptionPosition(object):
             results.append(merged_dict)
 
         return results
+
+    @classmethod
+    def mergein_orderdata_list(cls, client, option_positions):
+        """
+        Merge order ID and REF_ID
+        """
+        op_urls = []
+        for op in option_positions:
+            op_urls.append(op['option'])
+
+        order_data = OptionOrder.get_by_option_urls(client, op_urls)
+        for op in option_positions:
+            for order in order_data:
+                if op['option'] == order['ref_url']:
+                    op.update({ 'order_id': order['id'], 'ref_id': order['ref_id'] })
+
+        return option_positions
 
     @classmethod
     def humanize_numbers(cls, option_positions):

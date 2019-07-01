@@ -37,6 +37,34 @@ class OptionOrder(object):
         return results
 
     @classmethod
+    def get_by_option_urls(cls, client, option_urls):
+        """
+        Get option orders by URL's
+        """
+        url = 'https://api.robinhood.com/options/orders/'
+        data = client.get(url)
+        results = data["results"]
+
+        if not isinstance(option_urls, list):
+            option_urls = [option_urls]
+
+        op_results = []
+
+        break_loop = False
+        for y in range(len(option_urls)):
+            for i in range(len(results)):
+                for x in range(len(results[i]['legs'])):
+                    break_loop = False
+                    if results[i]['legs'][x]['option'] == option_urls[y]:
+                        results[i].update({ 'ref_url': option_urls[y] })
+                        op_results.append(results[i])
+                        break_loop = True
+                        break
+                if break_loop:
+                    break
+        return op_results
+
+    @classmethod
     def humanize_numbers(cls, option_orders):
         results = []
         for oo in option_orders:
